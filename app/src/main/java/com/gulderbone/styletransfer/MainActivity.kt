@@ -2,9 +2,9 @@ package com.gulderbone.styletransfer
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -40,7 +40,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.gulderbone.styletransfer.ui.theme.StyleTransferTheme
-import java.io.InputStream
+import java.nio.ByteBuffer
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -149,7 +149,11 @@ class MainActivity : ComponentActivity() {
             ContextCompat.getMainExecutor(applicationContext),
             object : OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
-                    onPhotoTaken(image.toBitmap())
+                    val processedBitmap = processImage(
+                        image.planes[0].buffer,
+                        image.imageInfo.rotationDegrees
+                    )
+                    onPhotoTaken(processedBitmap)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -158,6 +162,23 @@ class MainActivity : ComponentActivity() {
                 }
             }
         )
+    }
+
+    private fun processImage(buffer: ByteBuffer, rotation: Int): Bitmap {
+        val bytes = ByteArray(buffer.capacity())
+        buffer.get(bytes)
+        var bitmapBuffer = BitmapFactory.decodeByteArray(
+            bytes, 0,
+            bytes.size, null
+        )
+        val matrix = Matrix()
+        matrix.postRotate(rotation.toFloat())
+        bitmapBuffer = Bitmap.createBitmap(
+            bitmapBuffer, 0, 0, bitmapBuffer
+                .width, bitmapBuffer.height, matrix, true
+        )
+
+        return bitmapBuffer
     }
 
     private fun hasRequiredPermissions(): Boolean = CAMERAX_PERMISSIONS.all { permission ->

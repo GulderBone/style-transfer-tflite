@@ -2,7 +2,6 @@ package com.gulderbone.styletransfer
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.os.SystemClock
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
@@ -39,25 +38,24 @@ class TfLiteStyleTransfer(
     }
 
     fun transfer(bitmap: Bitmap): Bitmap? {
-        val predictTensorImage = processInputImage(
+        val inputTensorImage = processInputImage(
             bitmap,
-            predictInputTargetHeight,
-            predictInputTargetWidth
-        )
-
-        val transferTensorImage = processInputImage(
-            styleBitmap!!,
             transferInputTargetHeight,
             transferInputTargetWidth
+        )
+        val styleTensorImage = processInputImage(
+            styleBitmap!!,
+            predictInputTargetHeight,
+            predictInputTargetWidth
         )
 
         val predictOutput = TensorBuffer.createFixedSize(
             predictOutputShape, DataType.FLOAT32
         )
-        stylePredictInterpreter?.run(predictTensorImage?.buffer, predictOutput.buffer)
+        stylePredictInterpreter?.run(styleTensorImage?.buffer, predictOutput.buffer)
 
         val transformInput =
-            arrayOf(transferTensorImage?.buffer, predictOutput.buffer)
+            arrayOf(inputTensorImage?.buffer, predictOutput.buffer)
         val outputImage = TensorBuffer.createFixedSize(
             transferOutputShape, DataType.FLOAT32
         )
