@@ -61,7 +61,7 @@ class TfLiteStyleTransfer(
         )
         styleTransferInterpreter?.runForMultipleInputsOutputs(
             transformInput,
-            mapOf(Pair(0, outputImage.buffer))
+            mapOf(Pair(0, outputImage.buffer)) // we don't care about other outputs
         )
 
         return getOutputImage(outputImage)

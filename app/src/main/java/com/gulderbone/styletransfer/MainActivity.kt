@@ -15,12 +15,19 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.BottomSheetScaffold
@@ -29,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -123,22 +131,67 @@ class MainActivity : ComponentActivity() {
             TfLiteStyleTransfer(applicationContext)
         }
 
-        val styleBitmap = BitmapFactory.decodeStream(assets.open("thumbnails/example_style2.jpg"))
-        tfLiteStyleTransfer.setStyleImage(styleBitmap)
-
-        val bitmap = remember {
-            sharedViewModel.bitmap.value
+        val chosenImage = remember {
+            mutableStateOf<Bitmap?>(null)
         }
-        if (bitmap != null) {
-            val transferredBitmap = tfLiteStyleTransfer.transfer(bitmap)
-            if (transferredBitmap != null) {
-                Image(
-                    modifier = Modifier.fillMaxSize(),
-                    bitmap = transferredBitmap.asImageBitmap(),
-                    contentDescription = "Photo taken"
-                )
+        val imageChosen = remember {
+            mutableStateOf(false)
+        }
+
+        val styles = mutableListOf<Bitmap>()
+
+        assets.list("thumbnails")?.forEach {
+            styles.add(
+                BitmapFactory.decodeStream(assets.open("thumbnails/$it"))
+            )
+        }
+
+        if (!imageChosen.value) {
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(1),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalItemSpacing = 16.dp,
+            ) {
+                items(styles) {
+                    Box(
+                        modifier = Modifier
+                            .width(512.dp)
+                            .height(512.dp)
+                    ) {
+                        Image(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable {
+                                    chosenImage.value = it
+                                    imageChosen.value = true
+                                },
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "Style",
+                        )
+                    }
+                }
+            }
+        } else {
+            tfLiteStyleTransfer.setStyleImage(chosenImage.value!!)
+
+            val bitmap = remember {
+                sharedViewModel.bitmap.value
+            }
+
+            if (bitmap != null) {
+                val transferredBitmap = tfLiteStyleTransfer.transfer(bitmap)
+                if (transferredBitmap != null) {
+                    Image(
+                        modifier = Modifier.fillMaxSize(),
+                        bitmap = transferredBitmap.asImageBitmap(),
+                        contentDescription = "Photo taken"
+                    )
+                }
             }
         }
+
     }
 
     private fun takePhoto(
