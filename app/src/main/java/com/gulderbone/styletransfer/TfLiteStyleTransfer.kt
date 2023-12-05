@@ -49,17 +49,22 @@ class TfLiteStyleTransfer(
             predictInputTargetWidth
         )
 
+        // 1. Create buffer for the first model output
         val predictOutput = TensorBuffer.createFixedSize(
             predictOutputShape, DataType.FLOAT32
         )
+
+        // 2. Run first model
         stylePredictInterpreter?.run(styleTensorImage?.buffer, predictOutput.buffer)
 
         val transformInput =
             arrayOf(inputTensorImage?.buffer, predictOutput.buffer)
+
+        // 3. Create buffer for the second model output
         val outputImage = TensorBuffer.createFixedSize(
             transferOutputShape, DataType.FLOAT32
         )
-        styleTransferInterpreter?.runForMultipleInputsOutputs(
+        styleTransferInterpreter?.runForMultipleInputsOutputs( // 4. Get the final output
             transformInput,
             mapOf(Pair(0, outputImage.buffer)) // we don't care about other outputs
         )
@@ -72,11 +77,14 @@ class TfLiteStyleTransfer(
         targetWidth: Int,
         targetHeight: Int,
     ): TensorImage? {
+        val tensorImage = TensorImage(DataType.FLOAT32) // 1. Create TensorImage
+        tensorImage.load(image) // 2. Load the image into TensorImage
+
         val height = image.height
         val width = image.width
         val cropSize = Integer.min(height, width)
 
-        val imageProcessor = ImageProcessor.Builder()
+        val imageProcessor = ImageProcessor.Builder() // 3. Create ImageProcessor
             .add(ResizeWithCropOrPadOp(cropSize, cropSize))
             .add(
                 ResizeOp(
@@ -88,10 +96,7 @@ class TfLiteStyleTransfer(
             .add(NormalizeOp(0f, 255f))
             .build()
 
-        val tensorImage = TensorImage(DataType.FLOAT32)
-        tensorImage.load(image)
-
-        return imageProcessor.process(tensorImage)
+        return imageProcessor.process(tensorImage) // 4. Process the image
     }
 
     private fun getOutputImage(output: TensorBuffer): Bitmap? {
